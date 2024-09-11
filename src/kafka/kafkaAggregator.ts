@@ -26,9 +26,10 @@ interface FinancialData {
 
 interface AggregatedData {
   symbol: string;
-  maxPrice: number;
-  minPrice: number;
-  closingPrice: number;
+  openPrice: number;
+  highPrice: number;
+  lowPrice: number;
+  closePrice: number;
   count: number;
   openTimestamp: number;
   closeTimestamp: number;
@@ -56,18 +57,19 @@ export default class FinancialAggregator {
       aggregated = {
         symbol: data.symbol,
         type: data.type,
-        maxPrice: data.price,
-        minPrice: data.price,
-        closingPrice: data.price,
+        openPrice: data.price,
+        highPrice: data.price,
+        lowPrice: data.price,
+        closePrice: data.price,
         count: 1,
         openTimestamp: data.timestamp,
         closeTimestamp: data.timestamp,
       };
       this.setInterval(key);
     } else {
-      aggregated.maxPrice = Math.max(aggregated.maxPrice, data.price);
-      aggregated.minPrice = Math.min(aggregated.minPrice, data.price);
-      aggregated.closingPrice = data.price;
+      aggregated.highPrice = Math.max(aggregated.highPrice, data.price);
+      aggregated.lowPrice = Math.min(aggregated.lowPrice, data.price);
+      aggregated.closePrice = data.price;
       aggregated.count += 1;
       aggregated.closeTimestamp = data.timestamp;
     }
