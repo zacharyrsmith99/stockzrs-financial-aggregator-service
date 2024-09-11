@@ -1,0 +1,104 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+    
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      src_changed: ${{ steps.check_src.outputs.src_changed }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check for changes in src directory
+        id: check_src
+        run: |
+          git fetch origin develop
+          if git diff --quiet origin/develop HEAD -- src/; then
+            echo "src_changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "src_changed=true" >> $GITHUB_OUTPUT
+          fi
+
+  build-and-push:
+    needs: [check-changes]
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.build-image.outputs.image }}
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_GHA_ROLE_ARN }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: [check-changes, build-and-push]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_GHA_ROLE_ARN }}
+        aws-region: ${{ secrets.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.2'
+
+    - name: Update kube config
+      run: |
+        aws eks update-kubeconfig --name eks --region $AWS_REGION
+  
+    - name: Deploy to EKS
+      env:
+        IMAGE: ${{ needs.build-and-push.outputs.image }}
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      run: |
+          if [ -n "$IMAGE" ]; then
+            sed -i 's|image: .*|image: '"$IMAGE"'|' k8s/stockzrs-financial-aggregator-service-deployment.yml
+          else
+            # If no new image was built, use the latest image from ECR
+            LATEST_IMAGE=$(aws ecr describe-images --repository-name $ECR_REPOSITORY --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' --output text)
+            sed -i 's|image: .*|image: '"$ECR_REGISTRY/$ECR_REPOSITORY:$LATEST_IMAGE"'|' k8s/stockzrs-financial-aggregator-service-deployment.yml
+          fi
+
+          kubectl apply -f k8s/stockzrs-financial-aggregator-service-deployment.yml -n stockzrs-financial-aggregator-service
+
+          kubectl rollout restart deployment/stockzrs-financial-aggregator-service -n stockzrs-financial-aggregator-service

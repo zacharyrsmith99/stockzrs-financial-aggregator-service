@@ -1,0 +1,30 @@
+{
+  "name": "stockzrs-financial-aggregator-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc --sourceMap false -p tsconfig.json",
+    "start": "ts-node -r dotenv/config src/index.ts"
+  },
+  "author": "zachary.r.smith99@gmail.com",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "kafka-streams": "^5.0.0",
+    "luxon": "^3.5.0",
+    "node-rdkafka": "^3.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.10.0",
+    "@types/luxon": "^3.4.2",
+    "eslint": "^9.10.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "globals": "^15.9.0",
+    "prettier": "^3.3.3",
+    "typescript-eslint": "^8.5.0"
+  }
+}

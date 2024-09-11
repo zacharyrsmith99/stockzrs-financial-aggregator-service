@@ -1,0 +1,27 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stockzrs-financial-aggregator-service
+  namespace: stockzrs-financial-aggregator-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stockzrs-financial-aggregator-service
+  template:
+    metadata:
+      labels:
+        app: stockzrs-financial-aggregator-service
+    spec:
+      nodeSelector:
+        role: general
+      containers:
+      - name: stockzrs-financial-aggregator-service
+        image: PLACEHOLDER_IMAGE
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        envFrom:
+        - secretRef:
+            name: stockzrs-financial-aggregator-secrets
