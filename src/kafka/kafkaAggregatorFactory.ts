@@ -34,7 +34,7 @@ async function retryWithBackoff<T>(
 export default async function financialAggregatorFactory(logger: BaseLogger) {
   const kafka = new Kafka({
     clientId: "stockzrs-financial-aggregator-service",
-    brokers: [process.env.KAFKA_BOOTSTRAP_SERVER || "localhost:9092"],
+    brokers: [process.env.KAFKA_BROKER_URL || "localhost:9092"],
   });
 
   const financialAggregator = new FinancialAggregator(kafka, logger);
