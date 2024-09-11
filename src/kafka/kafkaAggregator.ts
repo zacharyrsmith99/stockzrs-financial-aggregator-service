@@ -2,10 +2,26 @@ import { Kafka, Consumer, Producer } from "kafkajs";
 import { DateTime } from "luxon";
 import BaseLogger from "../utils/logger";
 
+export enum AssetType {
+  Cryptocurrency = "CRYPTOCURRENCY",
+  Currency = "CURRENCY",
+  Stock = "STOCK",
+  Index = "INDEX",
+  Bond = "BOND",
+  Commodity = "COMMODITY",
+  ETF = "ETF",
+  Future = "FUTURE",
+  Option = "OPTION",
+  REIT = "REIT",
+  MutualFund = "MUTUAL_FUND",
+  ForexPair = "FOREX_PAIR",
+}
+
 interface FinancialData {
   symbol: string;
   price: number;
   timestamp: number;
+  type: AssetType;
 }
 
 interface AggregatedData {
@@ -16,6 +32,7 @@ interface AggregatedData {
   count: number;
   openTimestamp: number;
   closeTimestamp: number;
+  type: AssetType;
 }
 
 export default class FinancialAggregator {
@@ -38,6 +55,7 @@ export default class FinancialAggregator {
     if (!aggregated) {
       aggregated = {
         symbol: data.symbol,
+        type: data.type,
         maxPrice: data.price,
         minPrice: data.price,
         closingPrice: data.price,
@@ -82,7 +100,7 @@ export default class FinancialAggregator {
           ],
         };
         this.logger.info(
-          `Sent aggregated data for (${key}) with body (${$body})`,
+          `Sent aggregated data for (${key}) with body (${body})`,
         );
         await this.producer.send(body);
       } catch (error) {
