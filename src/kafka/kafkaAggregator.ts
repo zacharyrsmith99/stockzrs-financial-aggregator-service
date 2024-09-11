@@ -81,6 +81,9 @@ export default class FinancialAggregator {
             },
           ],
         };
+        this.logger.info(
+          `Sent aggregated data for (${key}) with body (${$body})`,
+        );
         await this.producer.send(body);
       } catch (error) {
         this.logger.error(`Error sending aggregated data: (${error})`);
