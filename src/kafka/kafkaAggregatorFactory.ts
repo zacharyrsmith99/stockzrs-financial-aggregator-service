@@ -32,9 +32,23 @@ async function retryWithBackoff<T>(
 }
 
 export default async function financialAggregatorFactory(logger: BaseLogger) {
+  const brokers = process.env.KAFKA_BOOTSTRAP_SERVERS
+    ? process.env.KAFKA_BOOTSTRAP_SERVERS!.split(",")
+    : ["localhost:9092"];
+
   const kafka = new Kafka({
     clientId: "stockzrs-financial-aggregator-service",
-    brokers: [process.env.KAFKA_BROKER_URL || "localhost:9092"],
+    brokers: brokers,
+    // sasl: {
+    //   mechanism: "scram-sha-512",
+    //   username: process.env.KAFKA_USERNAME!,
+    //   password: process.env.KAFKA_PASSWORD!,
+    // },
+    connectionTimeout: 3000,
+    retry: {
+      initialRetryTime: 100,
+      retries: 8,
+    },
   });
 
   const financialAggregator = new FinancialAggregator(kafka, logger);
